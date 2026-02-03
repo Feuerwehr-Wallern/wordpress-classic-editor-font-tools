@@ -16,14 +16,14 @@ function Write-Utf8NoBom {
 }
 
 # ==============================
-# Git verfügbar?
+# Git verfÃ¼gbar?
 # ==============================
 $gitAvailable = $false
 try {
     git --version | Out-Null
     $gitAvailable = $true
 } catch {
-    Write-Warning "Git nicht gefunden – Git-Funktionen deaktiviert."
+    Write-Warning "Git nicht gefunden â€“ Git-Funktionen deaktiviert."
 }
 
 # ==============================
@@ -38,11 +38,10 @@ Startzeit: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
 # ==============================
 # Release-Ordner vorbereiten
 # ==============================
-if (Test-Path $releaseDir) {
-    Get-ChildItem $releaseDir -Recurse | Remove-Item -Force -Recurse
-} else {
+if (-not (Test-Path $releaseDir)) {
     New-Item -ItemType Directory -Path $releaseDir | Out-Null
 }
+Write-Host "Release-Ordner: $releaseDir bereit."
 
 Write-Host "`nStarte Packprozess...`n"
 
@@ -68,7 +67,7 @@ Get-ChildItem -Directory | Where-Object {
     } | Select-Object -First 1
 
     if (-not $mainPhp) {
-        Write-Warning "Keine Haupt-PHP-Datei – übersprungen."
+        Write-Warning "Keine Haupt-PHP-Datei â€“ Ã¼bersprungen."
         return
     }
 
@@ -82,56 +81,63 @@ Get-ChildItem -Directory | Where-Object {
     Write-Host "0 = nein | 1 = Major | 2 = Minor | 3 = Patch"
 
     $choice = Read-Host "Auswahl"
-    if ($choice -notin @("1","2","3")) {
-        Write-Host "Übersprungen.`n"
+    $versionChanged = $false
+
+    if ($choice -in @("1","2","3")) {
+        $parts = $oldVersion.Split('.')
+        if ($parts.Count -ne 3 -or ($parts | Where-Object { $_ -notmatch '^\d+$' })) {
+            $major = 0; $minor = 0; $patch = 0
+        } else {
+            $major = [int]$parts[0]
+            $minor = [int]$parts[1]
+            $patch = [int]$parts[2]
+        }
+
+        switch ($choice) {
+            "1" { $major++; $minor = 0; $patch = 0 }
+            "2" { $minor++; $patch = 0 }
+            "3" { $patch++ }
+        }
+
+        $version = "$major.$minor.$patch"
+        $versionChanged = $true
+        Write-Host "Neue Version: $version"
+    } elseif ($choice -eq "0") {
+        $version = $oldVersion
+        Write-Host "Version bleibt unverÃ¤ndert: $version"
+    } else {
+        Write-Host "UngÃ¼ltige Auswahl â€“ Ã¼bersprungen.`n"
         return
     }
 
-    $releaseNote = Read-Host "Release-Notes"
+    $releaseNote = Read-Host "Release-Notes (optional)"
 
     # ==============================
-    # SemVer robust
+    # PHP-Version aktualisieren, nur wenn sich Version geÃ¤ndert hat
     # ==============================
-    $parts = $oldVersion.Split('.')
-    if ($parts.Count -ne 3 -or ($parts | Where-Object { $_ -notmatch '^\d+$' })) {
-        $major = 0; $minor = 0; $patch = 0
-    } else {
-        $major = [int]$parts[0]
-        $minor = [int]$parts[1]
-        $patch = [int]$parts[2]
+    if ($versionChanged) {
+        $phpContent = Get-Content $mainPhp.FullName -Raw
+        $phpContent = $phpContent -replace '(?<=Version:\s*)[0-9]+\.[0-9]+\.[0-9]+', $version
+        Write-Utf8NoBom $mainPhp.FullName $phpContent
     }
-
-    switch ($choice) {
-        "1" { $major++; $minor = 0; $patch = 0 }
-        "2" { $minor++; $patch = 0 }
-        "3" { $patch++ }
-    }
-
-    $version = "$major.$minor.$patch"
-    Write-Host "Neue Version: $version"
-
-    # ==============================
-    # PHP-Version aktualisieren ohne zusätzliche Leerzeilen
-    # ==============================
-    $phpContent = Get-Content $mainPhp.FullName -Raw
-    $phpContent = $phpContent -replace '(?<=Version:\s*)[0-9]+\.[0-9]+\.[0-9]+', $version
-    Write-Utf8NoBom $mainPhp.FullName $phpContent
 
     # ==============================
     # CHANGELOG.md (Markdown)
     # ==============================
-    $changelogPath = Join-Path $pluginDir "CHANGELOG.md"
-    $header = "## [$pluginName] v$version – $(Get-Date -Format 'yyyy-MM-dd')"
-    $entry = "$header`n- $releaseNote`n"
+    if ($releaseNote) {
+        $changelogPath = Join-Path $pluginDir "CHANGELOG.md"
+        $header = "## [$pluginName] v$version â€“ $(Get-Date -Format 'yyyy-MM-dd')"
+        $entry = "$header`n- $releaseNote`n"
 
-    if (Test-Path $changelogPath) {
-        $existing = Get-Content $changelogPath -Raw
-        $newChangelog = $entry + "`n" + $existing
-    } else {
-        $newChangelog = $entry
+        if (Test-Path $changelogPath) {
+            $existing = Get-Content $changelogPath -Raw
+            $newChangelog = $entry + "`n" + $existing
+        } else {
+            $newChangelog = $entry
+        }
+
+        Write-Utf8NoBom $changelogPath $newChangelog
     }
-
-    Write-Utf8NoBom $changelogPath $newChangelog
 
     # ==============================
     # ZIP erstellen (im Repo!)
@@ -150,21 +156,24 @@ Get-ChildItem -Directory | Where-Object {
 
         $commitMessage = @(
             "Release: $pluginName v$version"
-            ""
-            $releaseNote
         )
 
+        if ($releaseNote) {
+            $commitMessage += ""
+            $commitMessage += $releaseNote
+        }
+
         git commit -m ($commitMessage -join "`n")
-        Write-Host "? Commit für $pluginName erstellt"
+        Write-Host "? Commit fÃ¼r $pluginName erstellt"
 
         $tagName = "$pluginName/v$version"
         git tag -a $tagName -m "Release $tagName"
         Write-Host "? Tag $tagName erstellt"
 
-        if ((Read-Host "Git push für $pluginName (Commit + Tag inkl. ZIP)? (j/n)") -eq "j") {
+        if ((Read-Host "Git push fÃ¼r $pluginName (Commit + Tag inkl. ZIP)? (j/n)") -eq "j") {
             git push
             git push --tags
-            Write-Host "? Push für $pluginName ausgeführt"
+            Write-Host "? Push fÃ¼r $pluginName ausgefÃ¼hrt"
         }
     }
 
