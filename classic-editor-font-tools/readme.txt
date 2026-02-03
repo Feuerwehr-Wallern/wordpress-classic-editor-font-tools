@@ -21,8 +21,8 @@ Dieses Plugin erweitert den WordPress Classic Editor um:
 == Installation ==
 1. Plugin hochladen
 2. Aktivieren
-3. Einstellungen unter „Einstellungen → Editor Font Tools“
 
 == Changelog ==
 = 1.0.1 =
 * Initiale Veröffentlichung
+
