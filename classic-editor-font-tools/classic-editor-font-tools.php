@@ -2,7 +2,7 @@
 /*
 Plugin Name: Classic Editor Zusatztool
 Description: Farben & Styles + Emoji Picker im Classic Editor
-Version: 1.0.2
+Version: 1.0.3
 Author: Stefan Schneebauer
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
@@ -65,7 +65,7 @@ function ceft_settings_page() {
 
             <table class="form-table">
                 <tr>
-                    <th>PrimÃ¤rfarbe</th>
+                    <th>PrimÃƒÂ¤rfarbe</th>
                     <td>
                         <input type="color" name="ceft_primary_color"
                             value="<?php echo esc_attr( get_option( 'ceft_primary_color', '#1e73be' ) ); ?>">
@@ -73,7 +73,7 @@ function ceft_settings_page() {
                 </tr>
 
                 <tr>
-                    <th>SekundÃ¤rfarbe</th>
+                    <th>SekundÃƒÂ¤rfarbe</th>
                     <td>
                         <input type="color" name="ceft_secondary_color"
                             value="<?php echo esc_attr( get_option( 'ceft_secondary_color', '#27ae60' ) ); ?>">
@@ -89,7 +89,7 @@ function ceft_settings_page() {
         <h2>Buttons im Editor</h2>
         <p>
             Beispiel:<br>
-            <code>&lt;a href="#" class="ceft-btn ceft-btn-primary"&gt;Download ðŸš€&lt;/a&gt;</code>
+            <code>&lt;a href="#" class="ceft-btn ceft-btn-primary"&gt;Download Ã°Å¸Å¡â‚¬&lt;/a&gt;</code>
         </p>
     </div>
 <?php
